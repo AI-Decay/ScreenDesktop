@@ -3,6 +3,8 @@
 ##
 ## Get latest from https://github.com/github/gitignore/blob/master/VisualStudio.gitignore
 
+ScreenD\Screenshots/
+
 # User-specific files
 *.rsuser
 *.suo
@@ -338,3 +340,4 @@ ASALocalRun/
 
 # BeatPulse healthcheck temp database
 healthchecksdb
+/ScreenD/Screenshots

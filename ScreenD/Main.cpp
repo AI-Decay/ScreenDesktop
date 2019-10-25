@@ -16,6 +16,10 @@ extern int GetImage(HWND);
 extern void SaveSettings();
 extern void LoadSettings();
 
+BOOL isBmp{};
+BOOL isJpg{};
+BOOL isPng{};
+BOOL isTiff{};
 
 #define ClearMemory() { DeleteObject(hdcMemDC); ReleaseDC(hWnd, hdcWindow); return 0;}
 
@@ -39,10 +43,23 @@ int WINAPI wWinMain(HINSTANCE hInstance, HINSTANCE, PWSTR lpCmdLine, int nCmdSho
 		{
 			case WM_CREATE:
 			{
+				CreateDirectory(L"Screenshots", NULL);
 
 				HWND hButton = CreateWindow(L"BUTTON", L"Get Screen", WS_CHILD | WS_VISIBLE | BS_PUSHBUTTON,
 					120, 0, 100, 50, hWnd, reinterpret_cast<HMENU>(101), nullptr, nullptr);
-				CreateDirectory(L"Screenshots", NULL);
+				
+				HWND hCheckBmp = CreateWindow(L"BUTTON", L"BMP", WS_CHILD | WS_VISIBLE | BS_CHECKBOX,
+					32, 100, 50, 20, hWnd, reinterpret_cast<HMENU>(11), nullptr, nullptr);
+
+				HWND hCheckJpg = CreateWindow(L"BUTTON", L"JPEG", WS_CHILD | WS_VISIBLE | BS_CHECKBOX,
+					114, 100, 50, 20, hWnd, reinterpret_cast<HMENU>(12), nullptr, nullptr);
+
+				HWND hCheckPng = CreateWindow(L"BUTTON", L"PNG", WS_CHILD | WS_VISIBLE | BS_CHECKBOX,
+					196, 100, 50, 20, hWnd, reinterpret_cast<HMENU>(13), nullptr, nullptr);
+
+				HWND hCheckTiff = CreateWindow(L"BUTTON", L"TIFF", WS_CHILD | WS_VISIBLE | BS_CHECKBOX,
+					278, 100, 50, 20, hWnd, reinterpret_cast<HMENU>(14), nullptr, nullptr);
+				
 			}
 			return 0;
 
@@ -50,12 +67,75 @@ int WINAPI wWinMain(HINSTANCE hInstance, HINSTANCE, PWSTR lpCmdLine, int nCmdSho
 			{
 				switch (LOWORD(wParam))
 				{
-					case 101:
-					{	
-							GetImage(hWnd);
+					
+					case 11:
+					{
+						isBmp = IsDlgButtonChecked(hWnd, 11);
+
+						if (isBmp) {
+							CheckDlgButton(hWnd, 11, BST_UNCHECKED);
+							isBmp = FALSE;
+						}
+						else {
+							CheckDlgButton(hWnd, 11, BST_CHECKED);
+							isBmp = TRUE;
+						}
 					}
 					break;
+
+					case 12:
+					{
+						isJpg = IsDlgButtonChecked(hWnd, 12);
+
+						if (isJpg) {
+							CheckDlgButton(hWnd, 12, BST_UNCHECKED);
+							isJpg = FALSE;
+						}
+						else {
+							CheckDlgButton(hWnd, 12, BST_CHECKED);
+							isJpg = TRUE;
+						}
+					}
+					break;
+
+					case 13:
+					{
+						isPng = IsDlgButtonChecked(hWnd, 13);
+
+						if (isPng) {
+							CheckDlgButton(hWnd, 13, BST_UNCHECKED);
+							isPng = FALSE;
+						}
+						else {
+							CheckDlgButton(hWnd, 13, BST_CHECKED);
+							isPng = TRUE;
+						}
+					}
+					break;
+
+					case 14:
+					{
+						isTiff = IsDlgButtonChecked(hWnd, 14);
+
+						if (isTiff) {
+							CheckDlgButton(hWnd, 14, BST_UNCHECKED);
+							isTiff = FALSE;
+						}
+						else {
+							CheckDlgButton(hWnd, 14, BST_CHECKED);
+							isTiff = TRUE;
+						}
+					}
+					break;
+
+					case 101:
+					{
+							GetImage(hWnd);		
+					}
+					break;
+
 				}
+				
 			}
 			return 0;
 
@@ -75,7 +155,7 @@ int WINAPI wWinMain(HINSTANCE hInstance, HINSTANCE, PWSTR lpCmdLine, int nCmdSho
 	if (!RegisterClassEx(&wc))
 		return EXIT_FAILURE;
 
-	hwnd = CreateWindow(wc.lpszClassName, L"ScreenD 1.0", WS_MINIMIZEBOX | WS_SYSMENU | WS_CAPTION,
+	hwnd = CreateWindow(wc.lpszClassName, L"ScreenD 1.1", WS_MINIMIZEBOX | WS_SYSMENU | WS_CAPTION,
 		300, 0, 360, 300, nullptr, nullptr, wc.hInstance, nullptr);
 
 	if (hwnd == INVALID_HANDLE_VALUE)
@@ -108,11 +188,11 @@ int GetEncoderClsid(const WCHAR* format, CLSID* pClsid)
 
 	GetImageEncodersSize(&num, &size);
 	if (!size)
-		return EXIT_FAILURE;
+		return -1;
 
 	ImageCodecInfo* pImageCodecInfo{ static_cast<ImageCodecInfo*>(malloc(size)) };
 	if (!pImageCodecInfo)
-		return EXIT_FAILURE;
+		return -1;
 
 	GetImageEncoders(num, size, pImageCodecInfo);
 
@@ -127,7 +207,7 @@ int GetEncoderClsid(const WCHAR* format, CLSID* pClsid)
 	}
 
 	free(pImageCodecInfo);
-	return EXIT_FAILURE;
+	return -1;
 }
 
 bool is_empty(std::ifstream& pFile)
@@ -136,8 +216,6 @@ bool is_empty(std::ifstream& pFile)
 }
 
 void LoadSettings() {
-
-	int dataFile;
 
 	std::ifstream read;
 	read.open("..//Settings.txt");
@@ -163,6 +241,16 @@ void SaveSettings() {
 }
 
 int GetImage(HWND hWnd) {
+
+	if (!(isJpg || isPng || isBmp || isTiff)) {
+		MessageBox(hWnd, L"Select a file format", L"Failed", MB_OK);
+		return 0;
+	}
+
+	if ((isJpg + isPng + isBmp + isTiff) > 1) {
+		MessageBox(hWnd, L"Select only one format", L"Failed", MB_OK);
+		return 0;
+	}
 
 	HDC hdcWindow{}, hdcMemDC{};
 	HBITMAP hbmScreen{};
@@ -231,9 +319,23 @@ int GetImage(HWND hWnd) {
 
 
 	CLSID myClsId{};
-	int retVal = GetEncoderClsid(L"image/bmp", &myClsId);
+	std::wstring format_{};
+	
+	if (isPng)
+		format_ = L"png";
+	else if(isJpg)
+		format_ = L"jpeg";
+	else if(isBmp)
+		format_ = L"bmp";
+	else
+		format_ = L"tiff";
 
-	std::wstring name{ L"Screenshots\\Screenshot_" + std::to_wstring(FileCount) + L".bmp"};
+	std::wstring format{ L"image/" + format_};
+
+	int retVal = GetEncoderClsid(format.c_str(), &myClsId);
+	std::wstring name{ L"Screenshots\\Screenshot_" + std::to_wstring(FileCount) + L"." + format_};
+	
+
 	FileCount++;
 
 	const WCHAR* FileName = name.c_str();
