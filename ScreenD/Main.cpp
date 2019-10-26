@@ -17,16 +17,21 @@ extern void SaveSettings();
 extern void LoadSettings();
 
 BOOL isBmp{};
-BOOL isJpg{};
+BOOL isJpeg{};
 BOOL isPng{};
 BOOL isTiff{};
+HICON hIcon;
 
 #define ClearMemory() { DeleteObject(hdcMemDC); ReleaseDC(hWnd, hdcWindow); return 0;}
+#define APPWM_ICONNOTIFY (WM_APP + 1)
 
 int FileCount = 1;
 
 int WINAPI wWinMain(HINSTANCE hInstance, HINSTANCE, PWSTR lpCmdLine, int nCmdShow)
 {
+	static HICON hIcon = static_cast<HICON>(LoadImage(NULL, L"..//Tray.ico", IMAGE_ICON, 0, 0,
+		LR_DEFAULTCOLOR | LR_SHARED | LR_DEFAULTSIZE | LR_LOADFROMFILE));
+
 	MSG msg{};
 	HWND hwnd{};
 	WNDCLASSEX wc{ sizeof(WNDCLASSEX) };
@@ -34,11 +39,12 @@ int WINAPI wWinMain(HINSTANCE hInstance, HINSTANCE, PWSTR lpCmdLine, int nCmdSho
 	wc.cbWndExtra = 0;
 	wc.hbrBackground = CreatePatternBrush(static_cast<HBITMAP>(LoadImage(NULL, TEXT("..//Background.bmp"), 0, 0, 0, LR_LOADFROMFILE | LR_CREATEDIBSECTION)));
 	wc.hCursor = LoadCursor(nullptr, IDC_ARROW);
-	wc.hIcon = LoadIcon(nullptr, IDI_APPLICATION);
-	wc.hIconSm = LoadIcon(nullptr, IDI_APPLICATION);
+	wc.hIcon = hIcon;
+	wc.hIconSm = hIcon;
 	wc.hInstance = hInstance;
 	wc.lpfnWndProc = [](HWND hWnd, UINT uMsg, WPARAM wParam, LPARAM lParam)->LRESULT
 	{
+		
 		switch (uMsg)
 		{
 			case WM_CREATE:
@@ -49,17 +55,48 @@ int WINAPI wWinMain(HINSTANCE hInstance, HINSTANCE, PWSTR lpCmdLine, int nCmdSho
 					120, 0, 100, 50, hWnd, reinterpret_cast<HMENU>(101), nullptr, nullptr);
 				
 				HWND hCheckBmp = CreateWindow(L"BUTTON", L"BMP", WS_CHILD | WS_VISIBLE | BS_CHECKBOX,
-					32, 100, 50, 20, hWnd, reinterpret_cast<HMENU>(11), nullptr, nullptr);
+					24, 100, 60, 20, hWnd, reinterpret_cast<HMENU>(11), nullptr, nullptr);
 
 				HWND hCheckJpg = CreateWindow(L"BUTTON", L"JPEG", WS_CHILD | WS_VISIBLE | BS_CHECKBOX,
-					114, 100, 50, 20, hWnd, reinterpret_cast<HMENU>(12), nullptr, nullptr);
+					108, 100, 60, 20, hWnd, reinterpret_cast<HMENU>(12), nullptr, nullptr);
 
 				HWND hCheckPng = CreateWindow(L"BUTTON", L"PNG", WS_CHILD | WS_VISIBLE | BS_CHECKBOX,
-					196, 100, 50, 20, hWnd, reinterpret_cast<HMENU>(13), nullptr, nullptr);
+					192, 100, 60, 20, hWnd, reinterpret_cast<HMENU>(13), nullptr, nullptr);
 
 				HWND hCheckTiff = CreateWindow(L"BUTTON", L"TIFF", WS_CHILD | WS_VISIBLE | BS_CHECKBOX,
-					278, 100, 50, 20, hWnd, reinterpret_cast<HMENU>(14), nullptr, nullptr);
+					276, 100, 60, 20, hWnd, reinterpret_cast<HMENU>(14), nullptr, nullptr);
 				
+				LoadSettings();
+
+				if (isJpeg)
+					CheckDlgButton(hWnd, 12, BST_CHECKED);
+				else if (isPng)
+					CheckDlgButton(hWnd, 13, BST_CHECKED);
+				else if (isTiff)
+					CheckDlgButton(hWnd, 14, BST_CHECKED);
+				else
+					CheckDlgButton(hWnd, 11, BST_CHECKED);
+
+			}
+			return 0;
+
+			case APPWM_ICONNOTIFY:
+			{
+				switch (lParam)
+				{
+					case WM_LBUTTONDBLCLK:
+					{
+						NOTIFYICONDATA nid{};
+						nid.cbSize = sizeof(nid);
+						nid.hWnd = hWnd;
+						nid.uID = 1;
+
+						Shell_NotifyIcon(NIM_DELETE, &nid);
+						ShowWindow(hWnd, SW_SHOW);
+						ShowWindow(hWnd, SW_RESTORE);
+					}
+						break;
+				}
 			}
 			return 0;
 
@@ -78,22 +115,34 @@ int WINAPI wWinMain(HINSTANCE hInstance, HINSTANCE, PWSTR lpCmdLine, int nCmdSho
 						}
 						else {
 							CheckDlgButton(hWnd, 11, BST_CHECKED);
+							CheckDlgButton(hWnd, 12, BST_UNCHECKED);
+							CheckDlgButton(hWnd, 13, BST_UNCHECKED);
+							CheckDlgButton(hWnd, 14, BST_UNCHECKED);
 							isBmp = TRUE;
+							isPng = FALSE;
+							isTiff = FALSE;
+							isJpeg = FALSE;
 						}
 					}
 					break;
 
 					case 12:
 					{
-						isJpg = IsDlgButtonChecked(hWnd, 12);
+						isJpeg = IsDlgButtonChecked(hWnd, 12);
 
-						if (isJpg) {
+						if (isJpeg) {
 							CheckDlgButton(hWnd, 12, BST_UNCHECKED);
-							isJpg = FALSE;
+							isJpeg = FALSE;
 						}
 						else {
 							CheckDlgButton(hWnd, 12, BST_CHECKED);
-							isJpg = TRUE;
+							CheckDlgButton(hWnd, 11, BST_UNCHECKED);
+							CheckDlgButton(hWnd, 13, BST_UNCHECKED);
+							CheckDlgButton(hWnd, 14, BST_UNCHECKED);
+							isJpeg = TRUE;
+							isPng = FALSE;
+							isTiff = FALSE;
+							isBmp = FALSE;
 						}
 					}
 					break;
@@ -105,10 +154,17 @@ int WINAPI wWinMain(HINSTANCE hInstance, HINSTANCE, PWSTR lpCmdLine, int nCmdSho
 						if (isPng) {
 							CheckDlgButton(hWnd, 13, BST_UNCHECKED);
 							isPng = FALSE;
+
 						}
 						else {
 							CheckDlgButton(hWnd, 13, BST_CHECKED);
+							CheckDlgButton(hWnd, 12, BST_UNCHECKED);
+							CheckDlgButton(hWnd, 11, BST_UNCHECKED);
+							CheckDlgButton(hWnd, 14, BST_UNCHECKED);
 							isPng = TRUE;
+							isJpeg = FALSE;
+							isTiff = FALSE;
+							isBmp = FALSE;
 						}
 					}
 					break;
@@ -123,7 +179,13 @@ int WINAPI wWinMain(HINSTANCE hInstance, HINSTANCE, PWSTR lpCmdLine, int nCmdSho
 						}
 						else {
 							CheckDlgButton(hWnd, 14, BST_CHECKED);
+							CheckDlgButton(hWnd, 12, BST_UNCHECKED);
+							CheckDlgButton(hWnd, 13, BST_UNCHECKED);
+							CheckDlgButton(hWnd, 11, BST_UNCHECKED);
 							isTiff = TRUE;
+							isPng = FALSE;
+							isJpeg = FALSE;
+							isBmp = FALSE;
 						}
 					}
 					break;
@@ -133,14 +195,36 @@ int WINAPI wWinMain(HINSTANCE hInstance, HINSTANCE, PWSTR lpCmdLine, int nCmdSho
 							GetImage(hWnd);		
 					}
 					break;
-
 				}
 				
 			}
 			return 0;
 
+			case WM_SYSCOMMAND:  
+			{
+				switch (wParam)
+				{
+				case SC_MINIMIZE:
+
+					NOTIFYICONDATA nid{};
+					nid.cbSize = sizeof(nid);
+					nid.hWnd = hWnd;
+					nid.uID = 1;
+					nid.uFlags = NIF_ICON | NIF_TIP | NIF_MESSAGE;
+					nid.uCallbackMessage = APPWM_ICONNOTIFY;
+					nid.hIcon = hIcon;
+					Shell_NotifyIcon(NIM_ADD, &nid);
+
+					ShowWindow(hWnd, SW_MINIMIZE);
+					ShowWindow(hWnd, SW_HIDE);
+				}
+				break;
+			}
+			return 0;
+
 			case WM_DESTROY:
 			{
+				DestroyIcon(hIcon);
 				PostQuitMessage(EXIT_SUCCESS);
 			}
 			return 0;
@@ -155,14 +239,13 @@ int WINAPI wWinMain(HINSTANCE hInstance, HINSTANCE, PWSTR lpCmdLine, int nCmdSho
 	if (!RegisterClassEx(&wc))
 		return EXIT_FAILURE;
 
-	hwnd = CreateWindow(wc.lpszClassName, L"ScreenD 1.1", WS_MINIMIZEBOX | WS_SYSMENU | WS_CAPTION,
+	hwnd = CreateWindow(wc.lpszClassName, L"ScreenD 1.2", WS_MINIMIZEBOX | WS_SYSMENU | WS_CAPTION,
 		300, 0, 360, 300, nullptr, nullptr, wc.hInstance, nullptr);
 
 	if (hwnd == INVALID_HANDLE_VALUE)
 		return EXIT_FAILURE;
 
 	RegisterHotKey(NULL, 100, NULL, VK_SNAPSHOT);
-	LoadSettings();
 
 	ShowWindow(hwnd, nCmdShow);
 	UpdateWindow(hwnd);
@@ -220,6 +303,7 @@ void LoadSettings() {
 	std::ifstream read;
 	read.open("..//Settings.txt");
 
+	int FormatSet = 0;
 
 	if (read.is_open()) {
 		
@@ -227,6 +311,26 @@ void LoadSettings() {
 			FileCount = 0;
 		else
 			read >> FileCount;
+			read >> FormatSet;
+			switch (FormatSet)
+			{
+			case 1:
+				isBmp = TRUE;
+				break;
+			case 2:
+				isJpeg = TRUE;
+				break;
+			case 3:
+				isPng = TRUE;
+				break;
+			case 4:
+				isTiff = TRUE;
+				break;
+			default:
+				isBmp = TRUE;
+				break;
+			}
+
 	}
 
 	read.close();
@@ -236,21 +340,27 @@ void SaveSettings() {
 
 	std::ofstream write;
 	write.open("..//Settings.txt");
-	write << FileCount;
+	write << FileCount << std::endl;
+
+	if (isBmp)
+		write << 1;
+	else if(isJpeg)
+		write << 2;
+	else if (isPng)
+		write << 3;
+	else 
+		write << 4;
+	
 	write.close();
 }
 
 int GetImage(HWND hWnd) {
 
-	if (!(isJpg || isPng || isBmp || isTiff)) {
+	if (!(isJpeg || isPng || isBmp || isTiff)) {
 		MessageBox(hWnd, L"Select a file format", L"Failed", MB_OK);
 		return 0;
 	}
 
-	if ((isJpg + isPng + isBmp + isTiff) > 1) {
-		MessageBox(hWnd, L"Select only one format", L"Failed", MB_OK);
-		return 0;
-	}
 
 	HDC hdcWindow{}, hdcMemDC{};
 	HBITMAP hbmScreen{};
@@ -323,7 +433,7 @@ int GetImage(HWND hWnd) {
 	
 	if (isPng)
 		format_ = L"png";
-	else if(isJpg)
+	else if(isJpeg)
 		format_ = L"jpeg";
 	else if(isBmp)
 		format_ = L"bmp";
@@ -332,7 +442,11 @@ int GetImage(HWND hWnd) {
 
 	std::wstring format{ L"image/" + format_};
 
-	int retVal = GetEncoderClsid(format.c_str(), &myClsId);
+	if(GetEncoderClsid(format.c_str(), &myClsId) == -1)  {
+		MessageBox(hWnd, L"Encoding has failed", L"Failed", MB_OK);
+		ClearMemory();
+	}
+
 	std::wstring name{ L"Screenshots\\Screenshot_" + std::to_wstring(FileCount) + L"." + format_};
 	
 
